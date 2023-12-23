@@ -1,0 +1,52 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tdarr-exporter
+  namespace: media
+  labels:
+    app: tdarr-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tdarr-exporter
+  template:
+    metadata:
+      labels:
+        app: tdarr-exporter
+      annotations:
+        sidecar.istio.io/inject: 'false'
+        prometheus.io/scrape: 'true'
+        prometheus.io/path: '/metrics'
+        prometheus.io/port: '9082'
+    spec:
+      containers:
+      - name: tdarr-exporter
+        image: robertlestak/tdarr_exporter:latest
+        ports:
+        - containerPort: 9082
+          name: http-metrics
+        env:
+        - name: TDARR_HOST
+          value: "http://tdarr:8265"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9082
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9082
+        resources:
+          requests:
+            cpu: 50m
+            memory: 50Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+      tolerations:
+        - key: "node.kubernetes.io/arch"
+          operator: "Equal"
+          value: "arm64"
+          effect: "PreferNoSchedule"
